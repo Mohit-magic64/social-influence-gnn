@@ -1,19 +1,12 @@
 """
-analysis.py
------------
-Two things the headline table cannot tell you.
+Two things the headline results table cannot tell you.
 
-1. PAIRED COMPARISON. Seed-to-seed spread in this setup is about +/- 0.015 AUC, because
-   every seed regenerates the graph and the cascade. The model differences we care about
-   are around +0.005. Comparing marginal means is therefore useless - the error bars
-   swallow the effect. But the models share a seed, so the comparison can be paired:
-   for each seed, take (model - baseline) and ask whether that difference is consistent.
-   Pairing removes the shared data variance, which is the entire problem.
+1. Whether the GNN actually beats the baseline. Seed spread here is about +/- 0.015 AUC
+   and the effect is around +0.005, so marginal means are useless. The models share
+   seeds, so the comparison can be paired, which cancels the shared data variance.
 
-2. FRACTION OF HEADROOM RECOVERED. The diagnostic oracle (logistic regression handed the
-   exact generative feature) bounds what any model could gain from structure. Expressing
-   the GNN's gain as a share of that bound says something an absolute AUC cannot:
-   not "is it better" but "how much of what was there did it actually get".
+2. What share of the available structural signal the model captured, using the oracle
+   as the ceiling.
 
 Run:  python src/analysis.py
 """
@@ -42,8 +35,8 @@ def paired(per_seed: dict, metric: str = "auc_roc"):
     n = min(len(base), len(prop), len(orc))
     base, prop, orc = base[:n], prop[:n], orc[:n]
 
-    d = prop - base                      # what the GNN actually gained
-    h = orc - base                       # headroom the oracle says was available
+    d = prop - base    # what the GNN gained over the baseline, per seed
+    h = orc - base     # what the oracle says was available to gain, per seed
     out = {
         "n_seeds": int(n),
         "baseline": base.tolist(),
@@ -59,6 +52,8 @@ def paired(per_seed: dict, metric: str = "auc_roc"):
     if n > 1 and d.std(ddof=1) > 0:
         t = d.mean() / (d.std(ddof=1) / np.sqrt(n))
         out["paired_t"] = float(t)
+        # Reported as a consistency signal only. Three seeds is nowhere near enough for
+        # a p-value, and the honest read is the sign pattern across seeds.
         # Three seeds is far too few for a p-value to mean much. The t statistic is
         # reported as a consistency signal, not as evidence of significance, and the
         # honest read is the sign pattern across seeds.
