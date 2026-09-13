@@ -37,10 +37,10 @@ Three seeds. Each seed regenerates the graph, the cascade and the split, so the 
 | Logistic Regression (handcrafted only) | 0.6693 ± 0.0071 | 0.5354 ± 0.0032 | 0.5597 |
 | DeepWalk + MLP | 0.5390 ± 0.0105 | 0.3979 ± 0.0117 | 0.5313 |
 | node2vec + MLP | 0.5456 ± 0.0122 | 0.4024 ± 0.0099 | 0.5341 |
-| Plain GCN (no fusion) | 0.6234 ± 0.0105 | 0.4895 ± 0.0099 | 0.5386 |
-| Plain GAT (no fusion) | 0.6599 ± 0.0122 | 0.5257 ± 0.0059 | 0.5556 |
-| Full model: GCN + handcrafted | 0.6703 ± 0.0112 | 0.5374 ± 0.0013 | 0.5579 |
-| **Full model: GAT + handcrafted (proposed)** | **0.6690 ± 0.0079** | **0.5360 ± 0.0033** | **0.5545** |
+| Plain GCN (no fusion) | 0.6200 ± 0.0141 | 0.4884 ± 0.0114 | 0.5333 |
+| Plain GAT (no fusion) | 0.6605 ± 0.0128 | 0.5269 ± 0.0058 | 0.5541 |
+| Full model: GCN + handcrafted | 0.6693 ± 0.0092 | 0.5373 ± 0.0041 | 0.5593 |
+| **Full model: GAT + handcrafted (proposed)** | **0.6699 ± 0.0101** | **0.5384 ± 0.0031** | **0.5515** |
 | *[diagnostic] LR + 2-hop active count* | *0.6692 ± 0.0074* | *0.5351 ± 0.0029* | *0.5603* |
 | *[diagnostic] LR + true structural diversity* | *0.6793 ± 0.0032* | *0.5521 ± 0.0058* | *0.5638* |
 
@@ -51,10 +51,10 @@ Same code, same pipeline, same hyperparameters. Only the cascade coefficients mo
 | Model | AUC-ROC | AUC-PR | F1 |
 |---|---|---|---|
 | Logistic Regression (handcrafted only) | 0.6911 ± 0.0150 | 0.5895 ± 0.0052 | 0.5966 |
-| Plain GCN (no fusion) | 0.6504 ± 0.0177 | 0.5482 ± 0.0025 | 0.5740 |
-| Plain GAT (no fusion) | 0.6856 ± 0.0151 | 0.5823 ± 0.0054 | 0.5943 |
-| Full model: GCN + handcrafted | 0.6929 ± 0.0116 | 0.5919 ± 0.0021 | 0.6014 |
-| **Full model: GAT + handcrafted (proposed)** | **0.6967 ± 0.0145** | **0.5954 ± 0.0041** | **0.6071** |
+| Plain GCN (no fusion) | 0.6483 ± 0.0187 | 0.5442 ± 0.0058 | 0.5740 |
+| Plain GAT (no fusion) | 0.6851 ± 0.0175 | 0.5805 ± 0.0057 | 0.5964 |
+| Full model: GCN + handcrafted | 0.6968 ± 0.0124 | 0.5954 ± 0.0031 | 0.6057 |
+| **Full model: GAT + handcrafted (proposed)** | **0.6963 ± 0.0134** | **0.5934 ± 0.0038** | **0.6079** |
 | *[diagnostic] LR + true structural diversity* | *0.7230 ± 0.0112* | *0.6278 ± 0.0020* | *0.6199* |
 
 ### 3.3 The comparison that settles it
@@ -65,10 +65,12 @@ But every model shares its seed with the baseline it is being compared against. 
 
 | Regime | Metric | per-seed delta (GNN − LR) | mean | seeds won | oracle headroom | share recovered |
 |---|---|---|---|---|---|---|
-| A | AUC-ROC | −0.0012, +0.0005, −0.0004 | −0.0004 ± 0.0009 | 1/3 | +0.0100 | −4% |
-| A | AUC-PR | +0.0007, +0.0004, +0.0006 | +0.0006 ± 0.0002 | 3/3 | +0.0166 | 4% |
-| B | AUC-ROC | +0.0046, +0.0053, +0.0070 | **+0.0056 ± 0.0012** | **3/3** | +0.0319 | **18%** |
-| B | AUC-PR | +0.0055, +0.0044, +0.0078 | **+0.0059 ± 0.0017** | **3/3** | +0.0383 | **15%** |
+| A | AUC-ROC | −0.0017, +0.0046, −0.0013 | +0.0005 ± 0.0035 | 1/3 | +0.0100 | 5% |
+| A | AUC-PR | +0.0007, +0.0092, −0.0009 | +0.0030 ± 0.0055 | 2/3 | +0.0166 | 18% |
+| B | AUC-ROC | +0.0060, +0.0032, +0.0062 | **+0.0052 ± 0.0017** | **3/3** | +0.0319 | **16%** |
+| B | AUC-PR | +0.0063, +0.0020, +0.0034 | **+0.0039 ± 0.0022** | **3/3** | +0.0383 | **10%** |
+
+Regime A is noisy in both directions and splits 1/3 and 2/3. Regime B is positive on every seed in both metrics, with a spread about a third of the effect.
 
 Three seeds is nowhere near enough for a p-value to carry weight, and I am not claiming one. The evidence here is the sign pattern and how tight the spread is.
 
@@ -76,9 +78,9 @@ Three seeds is nowhere near enough for a p-value to carry weight, and I am not c
 
 The GNN's value tracks how structural the mechanism is. In regime A it ties a well-tuned logistic regression. In regime B it wins on every seed. The architecture never changed. The world did.
 
-And even when it wins, it picks up under a fifth of what was on the table. The oracle says +0.032 AUC of structural signal exists in regime B. The model gets +0.0056.
+And even when it wins, it picks up about a sixth of what was on the table. The oracle says +0.032 AUC of structural signal exists in regime B. The model gets +0.0052.
 
-That gap is not a tuning failure. Counting connected components among active neighbours is a global property of the induced subgraph, and a 2-layer message-passing network provably cannot compute it. This is the 1-Weisfeiler-Lehman expressiveness ceiling (Xu et al., 2019). A GNN can learn that a user's active neighbours are mutually connected, which is a local redundancy signal that correlates with diversity. It cannot learn the component count itself. Most of the missing 82% is that.
+That gap is not a tuning failure. Counting connected components among active neighbours is a global property of the induced subgraph, and a 2-layer message-passing network provably cannot compute it. This is the 1-Weisfeiler-Lehman expressiveness ceiling (Xu et al., 2019). A GNN can learn that a user's active neighbours are mutually connected, which is a local redundancy signal that correlates with diversity. It cannot learn the component count itself. Most of the missing 84% is that.
 
 The unsupervised embeddings are close to useless here at 0.54 AUC. Graph position with no action state says almost nothing about whether someone adopts. That is the expected result and worth saying plainly rather than burying.
 
@@ -100,6 +102,14 @@ An early version gave logistic regression a 2-hop active-neighbour count. That f
 
 So I pulled it, and reported it separately as a strengthened baseline so the choice stays visible. It made no difference at all: 0.6692 against 0.6693.
 
+**My results were not reproducible at first, and I nearly missed it.**
+
+Running the same seed twice gave 0.6533 and then 0.6599. The cause was ordering: the model was constructed, and therefore randomly initialised, before `torch.manual_seed` was called inside the training function. The data split and the dropout masks were seeded. The weights were not.
+
+Seeding before construction fixed it, and every number in this report now reproduces exactly on re-run. Both exported checkpoints match their table rows to four decimal places.
+
+Everything above was regenerated after the fix. The regime B result survived it (+0.0056 before, +0.0052 after, still 3/3), but the ablation gaps shrank a lot once the init noise was gone, which is why section 5 no longer claims most of them are meaningful.
+
 **I found a bug in my own evaluation.**
 
 Instances get cut at three different observation rounds. The oracle baseline was scoring all of them against a single shared cascade snapshot, which silently corrupted two thirds of the rows and made structural diversity look worthless. Fixed by tracking the observation round per instance.
@@ -108,16 +118,16 @@ Instances get cut at three different observation rounds. The oracle baseline was
 
 | Ablation | AUC-ROC | Δ |
 |---|---|---|
-| − handcrafted features entirely | 0.6437 | −0.025 |
-| 3 GNN layers instead of 2 | 0.6514 | −0.018 |
-| + node2vec structural embeddings | 0.6564 | −0.013 |
-| − instance normalisation | 0.6592 | −0.010 |
-| − wide/deep skip | 0.6593 | −0.010 |
-| 1 GNN layer instead of 2 | 0.6597 | −0.009 |
+| − handcrafted features entirely | 0.6474 | −0.012 |
+| + node2vec structural embeddings | 0.6556 | −0.004 |
+| − wide/deep skip | 0.6582 | −0.002 |
+| 3 GNN layers instead of 2 | 0.6590 | −0.001 |
+| 1 GNN layer instead of 2 | 0.6593 | −0.001 |
+| − instance normalisation | 0.6603 | +0.000 |
 
-Handcrafted features are the biggest single contributor by a wide margin. Three layers is worse than two, which is over-smoothing showing up directly in the numbers.
+Handcrafted features are the only component that clearly matters. Everything else moves the number by less than the seed-to-seed spread, so on this data I would not claim instance normalisation, the skip, or the layer count is doing real work. Single seed, so read these as directional.
 
-**Ego network radius barely matters.** k=1 gives 0.6586, k=2 gives 0.6554, k=3 gives 0.6624. Flat within noise, which fits a model that is not exploiting deep structure in the first place.
+**Ego network radius barely matters.** k=1 gives 0.6610, k=2 gives 0.6598, k=3 gives 0.6596. Flat, which fits a model that is not exploiting deep structure in the first place.
 
 ## 6. Limitations
 
