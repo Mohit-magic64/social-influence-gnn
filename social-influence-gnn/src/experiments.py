@@ -1,23 +1,13 @@
 """
-experiments.py
---------------
-Runs sections 4 and 5 of the problem statement and writes results/metrics.json
-and results/results.md.
+Runs every experiment and writes results/metrics.json and results/results.md.
 
-Full run:
     python src/experiments.py --stage all --seeds 0 1 2
 
-Resumable run (each stage checkpoints to results/partial/, so a small machine can do
-this in pieces):
-    python src/experiments.py --stage baselines --seed 0
-    python src/experiments.py --stage models    --seed 0
-    python src/experiments.py --stage ablations --seed 0
-    python src/experiments.py --stage khop      --seed 0
-    python src/experiments.py --stage report
+Each stage checkpoints to results/partial/ and resumes, so a small machine can run this
+in pieces without redoing finished models.
 
-Design rule followed throughout: the test set is touched exactly once per model, at the
-very end, with a threshold chosen on validation. Every hyperparameter, every early-stop
-decision and every threshold comes from validation data only.
+One rule holds throughout: the test set is touched exactly once per model, at the end,
+with a threshold chosen on validation.
 """
 
 from __future__ import annotations
@@ -46,6 +36,8 @@ CACHE = os.path.join(ROOT, "cache")
 RESULTS = os.path.join(ROOT, "results")
 PARTIAL = os.path.join(RESULTS, "partial")
 
+# Display order for the results table. Anything not listed here (ablations, k-hop rows)
+# gets grouped separately in stage_report.
 ORDER = [
     "Logistic Regression (handcrafted only)",
     "DeepWalk + MLP",
@@ -70,7 +62,7 @@ def save_partial(stage, seed, payload, regime="default"):
 
 
 def load_partial(stage, seed, regime="default"):
-    """Resume support: a stage that is re-run skips the models it already finished."""
+    """Resume support: re-running a stage skips models it already finished."""
     path = os.path.join(PARTIAL, f"{_key(stage, seed, regime)}.json")
     if os.path.exists(path):
         with open(path) as f:
@@ -87,6 +79,10 @@ def setup(seed, args, k_hops=2):
 
 
 def run_gnn(batcher, tr, va, te, seed, args, **kw):
+    torch.manual_seed(seed)
+    # Seed BEFORE constructing the model. The layers are randomly initialised at
+    # construction time, so seeding only inside train_model left the init unseeded and
+    # the same seed could swing the test AUC by ~0.007 between runs.
     model = InfluenceModel(
         d_node=batcher.d_node, d_hand=batcher.d_hand, hidden=64,
         layers=kw.get("layers", 2), encoder=kw.get("encoder", "gat"), heads=4,
@@ -98,10 +94,15 @@ def run_gnn(batcher, tr, va, te, seed, args, **kw):
                           patience=args.patience, lr=2e-3, seed=seed,
                           verbose=args.verbose)
     m["train_seconds"] = round(time.time() - t, 1)
+    # Every variant goes through this one function, so ablations cannot accidentally
+    # differ from the main model in some hyperparameter nobody was tracking.
     return m
 
 
 def make_batcher(inst, sg, seed, args, struct=False):
+    """Batcher for this dataset. struct=True adds the node2vec channel (an ablation)."""
+    # Default is False: the embeddings hurt the model, so they are opt-in rather than
+    # part of the proposed architecture.
     emb = None
     if struct:
         emb = get_embeddings(sg.adj_list, sg.n_nodes, "node2vec", dim=64,
@@ -167,6 +168,8 @@ def stage_ablations(seed, args):
     b.fit_hand_scaler(tr)
     b_st = make_batcher(inst, sg, seed, args, struct=True)
     b_st.hand_scaled, b_st.d_hand = b.hand_scaled, b.d_hand
+    # Reuse the same fitted scaler, so the only difference between the two batchers is
+    # the extra embedding channel. Refitting would add a second confound.
     out = load_partial("ablations", seed, args.regime)
     for name, bb, kw in [
         ("ABL: - instance normalisation", b, dict(use_inorm=False)),
@@ -210,6 +213,8 @@ def stage_report(args):
     meta_struct = {}
     for path in sorted(glob.glob(os.path.join(PARTIAL, "*.json"))):
         structural = "_structural_" in os.path.basename(path)
+        # Regime is encoded in the filename, so the two regimes never get averaged
+        # together into one meaningless number.
         with open(path) as f:
             d = json.load(f)
         for k, v in d.items():
@@ -238,6 +243,8 @@ def stage_report(args):
     abl_keys = [k for k in agg if k.startswith("ABL:")]
     khop_keys = sorted(k for k in agg if k.startswith("KHOP:"))
 
+    # "up to" because ablations and the k-hop sweep only ran on seed 0, while the main
+    # table ran on three.
     lines = ["# Results", "",
              f"Mean ± sd over up to {n_seeds} seeds. Each seed regenerates the graph, "
              "the cascade and the split, so the spread covers data variance as well as "
@@ -285,6 +292,8 @@ def main():
     if args.stage == "report":
         stage_report(args); return
     print(f"regime={args.regime}", flush=True)
+    # Printed every run. Forgetting which regime a partial result came from is the
+    # easiest way to end up comparing numbers that are not comparable.
 
     fns = {"baselines": stage_baselines, "models": stage_models,
            "ablations": stage_ablations, "khop": stage_khop}
