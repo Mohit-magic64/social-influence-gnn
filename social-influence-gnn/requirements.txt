@@ -1,0 +1,7 @@
+# Tested on Python 3.12, CPU only. No GPU and no torch-geometric required:
+# ego networks are fixed-size, so the model runs on dense [B, s, s] adjacency tensors.
+torch>=2.2
+numpy>=1.26
+scipy>=1.11
+networkx>=3.2
+scikit-learn>=1.4
